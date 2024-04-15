@@ -3,9 +3,7 @@ import { HTTPResponse, HTTPError, catchTryAsyncErrors } from "./helper.mjs";
 import CommunityPost from "./models/communityPost.model.mjs";
 import mongoose from "mongoose";
 
-
 const userId = "65d58c02ff92538d09c4b81a";
-
 
 export const handler = async (event) => {
   try {
@@ -21,11 +19,14 @@ export const handler = async (event) => {
           return catchTryAsyncErrors(addCommunityPost)(body);
         } else if (path.startsWith("/addCommentOnPost/")) {
           const postId = path.split("/").pop();
-          console.log("Extracted postId:", postId); // Log the extracted postId
-
+          // console.log("Extracted postId:", postId);
           return catchTryAsyncErrors(addCommentOnPost)(postId, body);
         }
         break;
+      case "GET":
+        if (path === "/getAllCommunityPost") {
+          return catchTryAsyncErrors(getAllCommunityPost)(queryParams);
+        }
       default:
         return {
           statusCode: StatusCodes.METHOD_NOT_ALLOWED,
@@ -61,25 +62,77 @@ export const addCommunityPost = async (body) => {
 };
 
 export const addCommentOnPost = async (postId, body) => {
-    const communityPost = await CommunityPost.findById(postId);
-    if (!communityPost) {
-      throw new HTTPError("Community Post not found!", StatusCodes.NOT_FOUND);
-    }
-    const newComment = {
-      _id: new mongoose.Types.ObjectId(), 
-      user: userId,
-      comment: body.comment, 
-    };
-    communityPost.comments.push(newComment);
-    communityPost.commentCount += 1;
-    await communityPost.save();
+  const communityPost = await CommunityPost.findById(postId);
+  if (!communityPost) {
+    throw new HTTPError("Community Post not found!", StatusCodes.NOT_FOUND);
+  }
+  const newComment = {
+    _id: new mongoose.Types.ObjectId(),
+    user: userId,
+    comment: body.comment,
+  };
+  communityPost.comments.push(newComment);
+  communityPost.commentCount += 1;
+  await communityPost.save();
 
-    const response = new HTTPResponse("Comment Added On Post!", communityPost);
-    return {
-      statusCode: StatusCodes.CREATED,
-      body: JSON.stringify(response),
-    };
-
+  const response = new HTTPResponse("Comment Added On Post!", communityPost);
+  return {
+    statusCode: StatusCodes.CREATED,
+    body: JSON.stringify(response),
+  };
 };
 
+export const getAllCommunityPost = async (queryParams) => {
+  const page = Number(queryParams.page) || 1;
+  const limit = Number(queryParams.limit) || 10;
+  const skip = (page - 1) * limit;
 
+  let { filter = "latest" } = queryParams;
+  // console.log("{incoming filter req.}=>", filter);
+
+  const aggregationPipeline = [];
+
+  if (filter === "latest") {
+    aggregationPipeline.push({ $sort: { createdAt: -1 } });
+  } else if (filter === "most_commented") {
+    aggregationPipeline.push({ $sort: { commentCount: -1 } });
+  } else if (filter === "oldest") {
+    aggregationPipeline.push({ $sort: { createdAt: 1 } });
+  }
+
+  aggregationPipeline.push({
+    $facet: {
+      metadata: [{ $count: "total" }, { $addFields: { page, limit } }],
+      data: [
+        {
+          $project: {
+            _id: 0,
+            commentCount: 1,
+            title: 1,
+            description: 1,
+            comments: 1,
+          },
+        },
+        { $skip: skip },
+        { $limit: limit },
+      ],
+    },
+  });
+
+  const [result] = await CommunityPost.aggregate(aggregationPipeline).exec();
+
+  const { metadata, data } = result || {
+    metadata: [{ total: 0, page, limit }],
+    data: [],
+  };
+
+  const response = new HTTPResponse("Success", {
+    post: data,
+    count: metadata.length > 0 ? metadata[0].total : 0,
+  });
+  console.log("record=>", data);
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
+};
