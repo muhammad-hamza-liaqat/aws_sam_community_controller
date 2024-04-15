@@ -208,3 +208,4 @@ export const getHotCommunityPost = async (event) => {
     body: JSON.stringify(response),
   };
 };
+
