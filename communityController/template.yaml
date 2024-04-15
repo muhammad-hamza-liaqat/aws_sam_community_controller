@@ -22,10 +22,15 @@ Resources:
           # MONGODB_URI: ""
           MONGODB_URI: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless
       Events:
-        getChainList:
+        addCommunityPost:
           Type: Api
           Properties:
             Path: /addCommunityPost
+            Method: post
+        addCommentOnPost:
+          Type: Api
+          Properties:
+            Path: /addCommentOnPost/{postId}
             Method: post
     Metadata:
       SamResourceId: HelloWorldFunction
