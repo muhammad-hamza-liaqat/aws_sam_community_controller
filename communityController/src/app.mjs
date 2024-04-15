@@ -28,7 +28,12 @@ export const handler = async (event) => {
           return catchTryAsyncErrors(getAllCommunityPost)(queryParams);
         } else if (path.startsWith("/getCommunityPostComment/")) {
           const postId = path.split("/").pop();
-          return catchTryAsyncErrors(getCommunityPostComment)(postId, queryParams);
+          return catchTryAsyncErrors(getCommunityPostComment)(
+            postId,
+            queryParams
+          );
+        } else if (path === "/getHotCommunityPost"){
+          return catchTryAsyncErrors(getHotCommunityPost)(event)
         }
         break;
       default:
@@ -47,7 +52,6 @@ export const handler = async (event) => {
     };
   }
 };
-
 
 export const addCommunityPost = async (body) => {
   const user = new mongoose.Types.ObjectId(userId);
@@ -155,6 +159,50 @@ export const getCommunityPostComment = async (postId, queryParams) => {
     count: totalPostCommentCount,
   });
 
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
+};
+
+export const getHotCommunityPost = async (event) => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  console.log("dateNow", thirtyDaysAgo);
+
+  const topPosts = await mongoose.model("CommunityPost").aggregate([
+    {
+      $match: {
+        createdAt: { $gte: thirtyDaysAgo },
+      },
+    },
+    {
+      $addFields: {
+        commentCount: { $size: "$comments" },
+      },
+    },
+    {
+      $match: {
+        commentCount: { $gte: 1 },
+      },
+    },
+    {
+      $sort: { commentCount: -1 },
+    },
+    {
+      $limit: 3,
+    },
+    {
+      $project: {
+        _id: 0,
+        commentCount: -1,
+        title: 1,
+        description: 1,
+      },
+    },
+  ]);
+  console.log("result=>", topPosts);
+  const response = new HTTPResponse("Success", topPosts);
   return {
     statusCode: StatusCodes.OK,
     body: JSON.stringify(response),
