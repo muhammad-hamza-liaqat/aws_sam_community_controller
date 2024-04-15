@@ -47,6 +47,11 @@ Resources:
           Properties:
             Path: /getHotCommunityPost
             Method: get
+        searchPost:
+          Type: Api
+          Properties:
+            Path: /searchPost
+            Method: get
     Metadata:
       SamResourceId: HelloWorldFunction
 Outputs:

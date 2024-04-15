@@ -32,8 +32,10 @@ export const handler = async (event) => {
             postId,
             queryParams
           );
-        } else if (path === "/getHotCommunityPost"){
-          return catchTryAsyncErrors(getHotCommunityPost)(event)
+        } else if (path === "/getHotCommunityPost") {
+          return catchTryAsyncErrors(getHotCommunityPost)(event);
+        } else if (path === "/searchPost") {
+          return catchTryAsyncErrors(searchPost)(queryParams);
         }
         break;
       default:
@@ -209,3 +211,36 @@ export const getHotCommunityPost = async (event) => {
   };
 };
 
+export const searchPost = async (queryParams) => {
+  const page = Number(queryParams.page) || 1;
+  const limit = Number(queryParams.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const searchQuery = queryParams.search;
+
+  const searchConditions = {
+    $or: [
+      { title: { $regex: new RegExp(`\\b${searchQuery}\\b`, "i") } },
+      { description: { $regex: new RegExp(`\\b${searchQuery}\\b`, "i") } },
+      {
+        "comments.comment": { $regex: new RegExp(`\\b${searchQuery}\\b`, "i") },
+      },
+    ],
+  };
+
+  const posts = await CommunityPost.find(searchConditions)
+    .skip(skip)
+    .limit(limit);
+
+  const totalPostCount = await CommunityPost.countDocuments(searchConditions);
+
+  const response = new HTTPResponse("Success", {
+    posts,
+    count: totalPostCount,
+  });
+
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
+};
