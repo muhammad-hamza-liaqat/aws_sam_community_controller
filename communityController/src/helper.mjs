@@ -1,12 +1,22 @@
 import StatusCodes from "http-status-codes";
 import { MongoClient } from 'mongodb';
-
+import mongoose from "mongoose";
+// export const DBConn = async () => {
+//   try {
+//     const encryptedClient = new MongoClient(process.env.MONGODB_URI, {});
+//     await encryptedClient.connect();
+//     console.log("db connected")
+//     return encryptedClient;
+//   } catch (err) {
+//     console.error("Database connection error:", err);
+//     throw err;
+//   }
+// };
 export const DBConn = async () => {
   try {
-    const encryptedClient = new MongoClient(process.env.MONGODB_URI, {});
-    await encryptedClient.connect();
-    console.log("db connected")
-    return encryptedClient;
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("db connected");
+    return mongoose.connection;
   } catch (err) {
     console.error("Database connection error:", err);
     throw err;
