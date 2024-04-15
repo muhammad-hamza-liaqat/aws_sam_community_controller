@@ -27,21 +27,6 @@ Resources:
           Properties:
             Path: /getChainsList
             Method: get
-        getMediaList:
-          Type: Api
-          Properties:
-            Path: /getMediaList
-            Method: get
-        getTopNodes:
-          Type: Api
-          Properties:
-            Path: /getTopNodes
-            Method: get
-        searchNodes:
-          Type: Api
-          Properties:
-            Path: /searchNodes
-            Method: post
     Metadata:
       SamResourceId: HelloWorldFunction
 Outputs:
