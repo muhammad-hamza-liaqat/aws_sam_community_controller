@@ -1,11 +1,8 @@
 import { StatusCodes } from "http-status-codes";
-import {
-  DBConn,
-  HTTPError,
-  HTTPResponse,
-  catchTryAsyncErrors,
-} from "./helper.mjs";
+import { DBConn, HTTPResponse, catchTryAsyncErrors } from "./helper.mjs";
 import { ObjectId } from "mongodb";
+
+var userId = "65d58c02ff92538d09c4b81a";
 
 export const handler = async (event) => {
   try {
@@ -15,12 +12,12 @@ export const handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
 
     const client = await DBConn();
-    const DB = client.db("10D");
+    const DB = client.db("10DServerless");
 
-    switch (method) {
-      case "GET":
+    switch (httpMethod) {
+      case "POST":
         if (path === "/addCommunityPost") {
-          return catchTryAsyncErrors(addCommunityPost)(queryParams, DB);
+          return catchTryAsyncErrors(addCommunityPost)(body, DB);
         }
         break;
       default:
@@ -35,21 +32,28 @@ export const handler = async (event) => {
     console.error("An error occurred:", error);
     return {
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
+      body: JSON.stringify({
+        message: "Something went wrong",
+        error: error.message,
+      }),
     };
   }
 };
 
-export const addCommunityPost = async (req, res) => {
-  let postToAdd = new CommunityPost({
-    ...req.body,
-    user: new mongoose.Types.ObjectId(userId),
-  });
-  await postToAdd.save();
-  let response = new HTTPResponse(
+export const addCommunityPost = async (body, DB) => {
+  const user = new ObjectId(userId);
+  const postToAdd = { ...body, user };
+
+  const postsCollection = DB.collection("communityposts");
+  await postsCollection.insertOne(postToAdd);
+
+  const response = new HTTPResponse(
     "Community Post created successfully!",
     postToAdd
   );
-  console.log("post added to db:", postToAdd);
-  return res.status(StatusCodes.CREATED).json(response);
+
+  return {
+    statusCode: StatusCodes.CREATED,
+    body: JSON.stringify(response),
+  };
 };
