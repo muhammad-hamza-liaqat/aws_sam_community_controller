@@ -26,7 +26,11 @@ export const handler = async (event) => {
       case "GET":
         if (path === "/getAllCommunityPost") {
           return catchTryAsyncErrors(getAllCommunityPost)(queryParams);
+        } else if (path.startsWith("/getCommunityPostComment/")) {
+          const postId = path.split("/").pop();
+          return catchTryAsyncErrors(getCommunityPostComment)(postId, queryParams);
         }
+        break;
       default:
         return {
           statusCode: StatusCodes.METHOD_NOT_ALLOWED,
@@ -43,6 +47,7 @@ export const handler = async (event) => {
     };
   }
 };
+
 
 export const addCommunityPost = async (body) => {
   const user = new mongoose.Types.ObjectId(userId);
@@ -131,6 +136,25 @@ export const getAllCommunityPost = async (queryParams) => {
     count: metadata.length > 0 ? metadata[0].total : 0,
   });
   console.log("record=>", data);
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
+};
+
+export const getCommunityPostComment = async (postId, queryParams) => {
+  const page = Number(queryParams.page) || 1;
+  const limit = Number(queryParams.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const post = await CommunityPost.findById(postId);
+  const comments = post.comments.slice(skip, skip + limit);
+  const totalPostCommentCount = post.commentCount;
+  const response = new HTTPResponse("Success", {
+    comments: comments,
+    count: totalPostCommentCount,
+  });
+
   return {
     statusCode: StatusCodes.OK,
     body: JSON.stringify(response),

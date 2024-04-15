@@ -37,6 +37,11 @@ Resources:
           Properties:
             Path: /getAllCommunityPost
             Method: get
+        getCommunityPostComment:
+          Type: Api
+          Properties:
+            Path: /getCommunityPostComment/{postId}
+            Method: get
     Metadata:
       SamResourceId: HelloWorldFunction
 Outputs:
